@@ -13,4 +13,12 @@ def mc_european_call(S0, K, r, sigma, T, n, seed=0):
     se = disc.std(ddof=1) / np.sqrt(n)
     return price, se, (price - 1.96 * se, price + 1.96 * se)
 
+def simulate_gbm_paths(S0, r, sigma, T, n_steps, n_paths, rng):
+    dt = T/n_steps
+    z = rng.standard_normal((n_paths, n_steps))
+    log_incr = (r-0.5*sigma**2)*dt + sigma*z*np.sqrt(dt)
+    paths = S0*np.exp(np.cumsum(log_incr, axis=1))
+    return np.hstack([np.full((n_paths, 1), S0), paths])
+
+
 
