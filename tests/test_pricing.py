@@ -1,6 +1,6 @@
 import numpy as np
 from quantlab.bs import bs_call, bs_put
-from quantlab.mc import mc_european_call, mc_european_call_antithetic, simulate_gbm_paths
+from quantlab.mc import mc_european_call, mc_european_call_antithetic, simulate_gbm_paths, mc_european_call_cv
 
 def test_put_call_parity():
     S, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
@@ -28,5 +28,13 @@ def test_antithetic_agrees_with_bs_and_beats_plain():
     exact = bs_call(S, K, r, sigma, T)
     p, se, _ = mc_european_call_antithetic(S, K, r, sigma, T, n=100_000, seed=2)
     _, se_plain, _ = mc_european_call(S, K, r, sigma, T, n=200_000, seed=2)
+    assert abs(p - exact) < 4 * se
+    assert se < se_plain
+
+def test_control_variate_agrees_with_bs_and_beats_plain():
+    S, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
+    exact = bs_call(S, K, r, sigma, T)
+    p, se, _ = mc_european_call_cv(S, K, r, sigma, T, n=200_000, seed=4)
+    _, se_plain, _ = mc_european_call(S, K, r, sigma, T, n=200_000, seed=4)
     assert abs(p - exact) < 4 * se
     assert se < se_plain

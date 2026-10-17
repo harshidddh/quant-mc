@@ -33,4 +33,14 @@ def mc_european_call_antithetic(S0, K, r, sigma, T, n, seed=0):
     se = disc.std(ddof=1) / np.sqrt(n)
     return price, se, (price - 1.96 * se, price + 1.96 * se)
 
+def mc_european_call_cv(S0, K, r, sigma, T, n, seed=0):
+    rng = np.random.default_rng(seed)
+    ST = simulate_gbm_terminal(S0, r, sigma, T, n, rng)
+    X = np.exp(-r * T) * ST
+    Y = np.exp(-r * T) * np.maximum(ST - K, 0)
+    beta = np.cov(Y, X)[0, 1] / np.var(X, ddof=1)
+    Y_adj = Y - beta * (X - S0)
+    price = Y_adj.mean()
+    se = Y_adj.std(ddof=1) / np.sqrt(n)
+    return price, se, (price - 1.96 * se, price + 1.96 * se)
 
