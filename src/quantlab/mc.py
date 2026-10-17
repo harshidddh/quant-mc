@@ -1,4 +1,5 @@
 import numpy as np
+from .bs import geo_asian_call
 
 def simulate_gbm_terminal(S0, r, sigma, T, n, rng):
     z = rng.standard_normal(n)
@@ -51,5 +52,21 @@ def mc_asian_call(S0, K, r, sigma, T, n_steps, n_paths, seed=0):
     disc = np.exp(-r * T) * np.maximum(A - K, 0)
     price = disc.mean()
     se = disc.std(ddof=1) / np.sqrt(n_paths)
+    return price, se, (price - 1.96 * se, price + 1.96 * se)
+
+def mc_asian_call_cv(S0, K, r, sigma, T, n_steps, n_paths, seed=0):
+    rng = np.random.default_rng(seed)
+    paths = simulate_gbm_paths(S0, r, sigma, T, n_steps, n_paths, rng)
+    prices = paths[:, 1:]
+    A = prices.mean(axis=1)
+    G = np.exp(np.log(prices).mean(axis=1))
+    disc = np.exp(-r * T)
+    Y = disc * np.maximum(A - K, 0)
+    X = disc * np.maximum(G - K, 0)
+    EX = geo_asian_call(S0, K, r, sigma, T, n_steps)
+    beta = np.cov(Y, X)[0, 1] / np.var(X, ddof=1)
+    Y_adj = Y - beta * (X - EX)
+    price = Y_adj.mean()
+    se = Y_adj.std(ddof=1) / np.sqrt(n_paths)
     return price, se, (price - 1.96 * se, price + 1.96 * se)
 

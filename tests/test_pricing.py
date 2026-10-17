@@ -1,6 +1,6 @@
 import numpy as np
-from quantlab.bs import bs_call, bs_put
-from quantlab.mc import mc_european_call, mc_european_call_antithetic, simulate_gbm_paths, mc_european_call_cv, mc_asian_call
+from quantlab.bs import bs_call, bs_put, geo_asian_call
+from quantlab.mc import mc_european_call, mc_european_call_antithetic, simulate_gbm_paths, mc_european_call_cv, mc_asian_call, mc_asian_call_cv
 
 def test_put_call_parity():
     S, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
@@ -46,3 +46,23 @@ def test_asian_one_step_equals_european_and_more_steps_is_cheaper():
     assert abs(p1 - exact) < 4 * se1
     p, se, _ = mc_asian_call(S, K, r, sigma, T, 52, 50_000, seed=5)
     assert p + 4 * se < exact
+
+def test_geo_asian_one_date_equals_black_scholes():
+    S, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
+    assert abs(geo_asian_call(S, K, r, sigma, T, 1) - bs_call(S, K, r, sigma, T)) < 1e-9
+
+def test_geo_asian_mc_matches_closed_form():
+    S, K, r, sigma, T, m = 100, 100, 0.05, 0.2, 1.0, 52
+    rng = np.random.default_rng(6)
+    prices = simulate_gbm_paths(S, r, sigma, T, m, 50_000, rng)[:, 1:]
+    G = np.exp(np.log(prices).mean(axis=1))
+    X = np.exp(-r * T) * np.maximum(G - K, 0)
+    se = X.std(ddof=1) / np.sqrt(len(X))
+    assert abs(X.mean() - geo_asian_call(S, K, r, sigma, T, m)) < 4 * se
+
+def test_asian_cv_is_much_tighter_and_consistent_with_plain():
+    S, K, r, sigma, T, m = 100, 100, 0.05, 0.2, 1.0, 52
+    p, se, _ = mc_asian_call(S, K, r, sigma, T, m, 20_000, seed=7)
+    p_cv, se_cv, _ = mc_asian_call_cv(S, K, r, sigma, T, m, 20_000, seed=7)
+    assert se_cv < se / 10
+    assert abs(p_cv - p) < 4 * se
