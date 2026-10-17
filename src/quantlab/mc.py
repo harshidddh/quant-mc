@@ -44,3 +44,12 @@ def mc_european_call_cv(S0, K, r, sigma, T, n, seed=0):
     se = Y_adj.std(ddof=1) / np.sqrt(n)
     return price, se, (price - 1.96 * se, price + 1.96 * se)
 
+def mc_asian_call(S0, K, r, sigma, T, n_steps, n_paths, seed=0):
+    rng = np.random.default_rng(seed)
+    paths = simulate_gbm_paths(S0, r, sigma, T, n_steps, n_paths, rng)
+    A = paths[:, 1:].mean(axis=1)
+    disc = np.exp(-r * T) * np.maximum(A - K, 0)
+    price = disc.mean()
+    se = disc.std(ddof=1) / np.sqrt(n_paths)
+    return price, se, (price - 1.96 * se, price + 1.96 * se)
+

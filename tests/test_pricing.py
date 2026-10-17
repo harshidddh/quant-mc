@@ -1,6 +1,6 @@
 import numpy as np
 from quantlab.bs import bs_call, bs_put
-from quantlab.mc import mc_european_call, mc_european_call_antithetic, simulate_gbm_paths, mc_european_call_cv
+from quantlab.mc import mc_european_call, mc_european_call_antithetic, simulate_gbm_paths, mc_european_call_cv, mc_asian_call
 
 def test_put_call_parity():
     S, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
@@ -38,3 +38,11 @@ def test_control_variate_agrees_with_bs_and_beats_plain():
     _, se_plain, _ = mc_european_call(S, K, r, sigma, T, n=200_000, seed=4)
     assert abs(p - exact) < 4 * se
     assert se < se_plain
+
+def test_asian_one_step_equals_european_and_more_steps_is_cheaper():
+    S, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
+    exact = bs_call(S, K, r, sigma, T)
+    p1, se1, _ = mc_asian_call(S, K, r, sigma, T, 1, 200_000, seed=5)
+    assert abs(p1 - exact) < 4 * se1
+    p, se, _ = mc_asian_call(S, K, r, sigma, T, 52, 50_000, seed=5)
+    assert p + 4 * se < exact
