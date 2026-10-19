@@ -21,3 +21,13 @@ def fit_garch(x):
     cons = {"type": "ineq", "fun": lambda p: 0.9999 - p[2] - p[3]}
     return minimize(garch_neg_loglik, start, args=(x,),
                     method="SLSQP", bounds=bounds, constraints=cons)
+
+def simulate_garch(mu, omega, alpha, beta, sigma2_0, n_steps, n_paths, rng):
+    returns = np.empty((n_paths, n_steps))
+    sigma2 = np.full(n_paths, sigma2_0)
+    for t in range(n_steps):
+        z = rng.standard_normal(n_paths)
+        eps = np.sqrt(sigma2) * z
+        returns[:, t] = mu + eps
+        sigma2 = omega + alpha * eps**2 + beta * sigma2
+    return returns

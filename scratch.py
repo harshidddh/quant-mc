@@ -1,17 +1,17 @@
 import numpy as np
-from arch import arch_model
+from scipy import stats
 from src.quantlab.data import load_log_returns
-from src.quantlab.garch import fit_garch
+from src.quantlab.garch import fit_garch, simulate_garch
+from src.quantlab.diagnostics import acf
 
 x = 100 * load_log_returns().values
+mu, omega, alpha, beta = fit_garch(x).x
+V = omega / (1 - alpha - beta)
 
-res = fit_garch(x)
-mu, omega, alpha, beta = res.x
-print("converged:", res.success)
-print("mine : mu=%.4f omega=%.4f alpha=%.4f beta=%.4f  logL=%.2f" % (mu, omega, alpha, beta, -res.fun))
-print("persistence alpha+beta:", alpha + beta)
-print("long-run annualised vol (%):", np.sqrt(omega / (1 - alpha - beta) * 252))
+rng = np.random.default_rng(0)
+sim = simulate_garch(mu, omega, alpha, beta, V, 1000, 500, rng)
+eps = sim - mu
 
-ref = arch_model(x, mean="Constant", vol="GARCH", p=1, q=1).fit(disp="off")
-p = ref.params
-print("arch : mu=%.4f omega=%.4f alpha=%.4f beta=%.4f  logL=%.2f" % (p["mu"], p["omega"], p["alpha[1]"], p["beta[1]"], ref.loglikelihood))
+print("variance: simulated", eps.var(), "  long-run V", V)
+print("excess kurtosis: simulated", stats.kurtosis(eps.ravel()), "  real data", stats.kurtosis(x))
+print("lag-1 acf of squared returns: simulated", np.mean([acf(p**2, 1)[0] for p in eps[:100]]), "  real data 0.183")

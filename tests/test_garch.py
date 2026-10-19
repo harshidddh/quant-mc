@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import stats
-from quantlab.garch import garch_neg_loglik, fit_garch
+from quantlab.garch import garch_neg_loglik, fit_garch, simulate_garch
 
 def test_garch_reduces_to_normal_when_alpha_beta_zero():
     rng = np.random.default_rng(0)
@@ -27,3 +27,10 @@ def test_fit_garch_recovers_known_parameters():
     assert abs(alpha - 0.10) < 0.05
     assert abs(beta - 0.85) < 0.08
     assert abs(alpha + beta - 0.95) < 0.03
+
+def test_simulate_garch_matches_long_run_variance():
+    rng = np.random.default_rng(1)
+    omega, alpha, beta = 0.05, 0.10, 0.85
+    V = omega / (1 - alpha - beta)
+    sim = simulate_garch(0.0, omega, alpha, beta, V, 500, 2000, rng)
+    assert abs(sim.var() - V) / V < 0.05
