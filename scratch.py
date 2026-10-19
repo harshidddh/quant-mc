@@ -1,20 +1,17 @@
 import numpy as np
-from scipy import stats
+from arch import arch_model
 from src.quantlab.data import load_log_returns
-from src.quantlab.garch import garch_variance, garch_neg_loglik
+from src.quantlab.garch import fit_garch
 
-R = load_log_returns()
-x = 100 * R.values
+x = 100 * load_log_returns().values
 
-# Test 1: with alpha = beta = 0 the variance is constant, so we must match a plain normal
-mu, omega = x.mean(), x.var()
-mine = garch_neg_loglik([mu, omega, 0.0, 0.0], x)
-ref = -np.sum(stats.norm.logpdf(x, mu, np.sqrt(omega)))
-print("mine:", mine)
-print("scipy:", ref)
+res = fit_garch(x)
+mu, omega, alpha, beta = res.x
+print("converged:", res.success)
+print("mine : mu=%.4f omega=%.4f alpha=%.4f beta=%.4f  logL=%.2f" % (mu, omega, alpha, beta, -res.fun))
+print("persistence alpha+beta:", alpha + beta)
+print("long-run annualised vol (%):", np.sqrt(omega / (1 - alpha - beta) * 252))
 
-# Test 2: with typical GARCH parameters the variance path must stay positive
-eps = x - x.mean()
-s2 = garch_variance(0.02, 0.1, 0.85, eps)
-print("all positive:", np.all(s2 > 0))
-print("highest-variance day:", R.index[np.argmax(s2)].date())
+ref = arch_model(x, mean="Constant", vol="GARCH", p=1, q=1).fit(disp="off")
+p = ref.params
+print("arch : mu=%.4f omega=%.4f alpha=%.4f beta=%.4f  logL=%.2f" % (p["mu"], p["omega"], p["alpha[1]"], p["beta[1]"], ref.loglikelihood))
