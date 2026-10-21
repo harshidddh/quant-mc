@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import stats
-from quantlab.garch import garch_neg_loglik, fit_garch, simulate_garch
+from quantlab.garch import garch_neg_loglik, fit_garch, simulate_garch, simulate_garch_rn_terminal
 
 def test_garch_reduces_to_normal_when_alpha_beta_zero():
     rng = np.random.default_rng(0)
@@ -34,3 +34,12 @@ def test_simulate_garch_matches_long_run_variance():
     V = omega / (1 - alpha - beta)
     sim = simulate_garch(0.0, omega, alpha, beta, V, 500, 2000, rng)
     assert abs(sim.var() - V) / V < 0.05
+
+def test_rn_terminal_is_martingale():
+    rng = np.random.default_rng(2)
+    omega, alpha, beta = 0.05, 0.10, 0.85
+    V = omega / (1 - alpha - beta)
+    ST = simulate_garch_rn_terminal(100, 0.05, omega, alpha, beta, V, 252, 50_000, rng)
+    disc = np.exp(-0.05) * ST
+    se = disc.std(ddof=1) / np.sqrt(len(disc))
+    assert abs(disc.mean() - 100) < 4 * se

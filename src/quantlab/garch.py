@@ -31,3 +31,14 @@ def simulate_garch(mu, omega, alpha, beta, sigma2_0, n_steps, n_paths, rng):
         returns[:, t] = mu + eps
         sigma2 = omega + alpha * eps**2 + beta * sigma2
     return returns
+
+def simulate_garch_rn_terminal(S0, r, omega, alpha, beta, sigma2_0, n_steps, n_paths, rng):
+    r_d = 100 * r / 252
+    total = np.zeros(n_paths)
+    sigma2 = np.full(n_paths, sigma2_0)
+    for t in range(n_steps):
+        z = rng.standard_normal(n_paths)
+        eps = np.sqrt(sigma2) * z
+        total += r_d - 0.5 * sigma2 / 100 + eps
+        sigma2 = omega + alpha * eps**2 + beta * sigma2
+    return S0 * np.exp(total / 100)

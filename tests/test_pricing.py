@@ -1,5 +1,5 @@
 import numpy as np
-from quantlab.bs import bs_call, bs_put, geo_asian_call
+from quantlab.bs import bs_call, bs_put, geo_asian_call, implied_vol
 from quantlab.mc import mc_european_call, mc_european_call_antithetic, simulate_gbm_paths, mc_european_call_cv, mc_asian_call, mc_asian_call_cv
 
 def test_put_call_parity():
@@ -66,3 +66,7 @@ def test_asian_cv_is_much_tighter_and_consistent_with_plain():
     p_cv, se_cv, _ = mc_asian_call_cv(S, K, r, sigma, T, m, 20_000, seed=7)
     assert se_cv < se / 10
     assert abs(p_cv - p) < 4 * se
+
+def test_implied_vol_round_trip():
+    p = bs_call(100, 110, 0.05, 0.25, 0.5)
+    assert abs(implied_vol(p, 100, 110, 0.05, 0.5) - 0.25) < 1e-6
